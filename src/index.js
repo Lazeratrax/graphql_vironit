@@ -1,12 +1,13 @@
 const express = require("express")
 const graphqlHttp = require("express-graphql")
-
 const schema = require("./schema")
 const startDatabase = require("./database")
+const isTokenValid = require("./validate")
+// const bcrypyt = require("./bcryptjs")
+// const crypto = require('crypto')
+// const {validationResult} = require('express-validator')
 
 const expressPlayground = require("graphql-playground-middleware-express").default;
-
-const isTokenValid = require("./validate")
 
 // Create a context for holding contextual data
 const context = async req => {
@@ -31,24 +32,55 @@ const resolvers = {
         const user = await db.collection("users").findOne({id});
         return !error ? user : {...user, id: 1}
     },
-    editUser: async ({id, firstName, secondName, email, password, tel, avatarUrl}, context) => {
+    //мутации
+    createUser: async ({id, firstName}, context) => {
         const {db, token} = await context();
-
-        const {error} = await isTokenValid(token)
-
-        if (error) {
+        console.log(db)
+        // const {error} = isTokenValid(token);
+        //хэширование пароля
+        // const hashPassword = await bcrypyt.hash(password, 10)
+        const newUser = {id, firstName};
+        db.collection("users").insert(newUser);
+        return newUser
+    },
+    editUser: async ({id, firstName}, context) => {
+        try {
+            const {db, token} = await context();
+            const {error} = await isTokenValid(token)
+            if (error) {
+                throw new Error(error)
+            }
+            return db
+                .collection('users')
+                .findOneAndUpdate(
+                    {id},
+                    {$set: {firstName}},
+                    {returnOriginal: false},
+                )
+                .then(resp => resp.value)
+        } catch (e) {
             throw new Error(error)
+            console.log(`что-то пошло не так ${e}`)
         }
-
-        return db
-            .collection('events')
-            .findOneAndUpdate(
-                {id},
-                {$set: {firstName, secondName, email, password, tel, avatarUrl}},
-                {returnOriginal: false},
-            )
-            .then(resp => resp.value)
-    }
+    },
+    deleteUser: async ({id}, context) => {
+        try {
+            // const {db} = await context();
+            // const userDelete = await db.findOne({
+            //     where: {id}
+            // })
+            // await userDelete[0].destroy()
+            // return true
+            const {db} = await context();
+            // const {error} = await isTokenValid(token)
+            // if (error) {
+            //     throw new Error(error)
+            // }
+            return db.collection('users').findOneAndDelete({id}).then(resp => resp.value)
+        } catch (e) {
+            throw new Error("id is required")
+        }
+    },
 }
 
 const app = express()
@@ -63,6 +95,6 @@ app.use(
 
 //запуск графического редактора в браузере
 app.get('/playground', expressPlayground({endpoint: '/graphql'}));
-app.listen(4000)
+app.listen(4000, () => console.log("Server ready at http://localhost:4000/graphql"))
 
-console.log("Server ready at http://localhost:4000/graphql")
+

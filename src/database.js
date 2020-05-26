@@ -19,23 +19,23 @@ async function startDatabase() {
         await database.collection("users").insertMany([
                 {
                     id: 1,
-                    firstName: "Kirill",
-                    secondName: "Lazarev",
-                    email: "lazeratrax@gmail.com",
-                    password: "1234567Q",
-                    tel: 375447610553,
-                    avatarUrl: "https://econet.ru/uploads/pictures/456173/content_199820.jpg",
-                    isOnline: false
+                    firstName: "Kirill"
+                    // secondName: "Lazarev",
+                    // email: "lazeratrax@gmail.com",
+                    // password: "1234567Q",
+                    // tel: 375447610553,
+                    // avatarUrl: "https://econet.ru/uploads/pictures/456173/content_199820.jpg",
+                    // isOnline: false
                 },
                 {
-                    id: 2,
-                    firstName: "Lena",
-                    secondName: "Lazareva",
-                    email: "kate@gmail.com",
-                    password: "1234567Q",
-                    tel: 375298887777,
-                    avatarUrl: "https://cs11.livemaster.ru/storage/topicavatar/600x450/04/66/4078a444edc286bd35b0a0a67c680cc42204sw.jpg?h=AH8vAuYPoFKwWsdzxggafA",
-                    isOnline: false
+                    id: 12,
+                    firstName: "Lena"
+                    // secondName: "Lazareva",
+                    // email: "kate@gmail.com",
+                    // password: "1234567Q",
+                    // tel: 375298887777,
+                    // avatarUrl: "https://cs11.livemaster.ru/storage/topicavatar/600x450/04/66/4078a444edc286bd35b0a0a67c680cc42204sw.jpg?h=AH8vAuYPoFKwWsdzxggafA",
+                    // isOnline: false
                 }
             ]
         )
