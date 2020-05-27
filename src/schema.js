@@ -5,28 +5,21 @@ const schema = buildSchema(`
        type User {
        id: Int!
        firstName: String!
+       password: String!
       }
       
       type Query {
         users: [User!]!
-        user(id: Int!): User!
-        random(min: Int!, max:Int!, count:Int!): [Float!]!
+        user(id: Int!,  firstName: String!, password: String!): User!
     }
 
       type Mutation {
-      createUser(id: Int!, firstName: String!): User!
-      editUser(id: Int, firstName: String ): User!
-      deleteUser(id: Int!): User!
-      loginUser(id: Int!):User!
-      logoutUser(id: Int!):User!
+      createUser(id: Int!, firstName: String!, password: String!): User!
+      loginUser(id: Int!, firstName: String!, password: String!): User
+      editUser(id: Int, firstName: String, password: String!): User!
+      deleteUser(id: Int!, firstName: String, password: String! ): User!
     }
     `)
 
 module.exports = schema;
 
-// secondName:String!
-//     email: String
-// password: String!
-//     tel: Int
-// avatarUrl: String!
-//     isOnline: Boolean

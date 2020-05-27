@@ -20,7 +20,8 @@ async function startDatabase() {
         await database.collection("users").insertMany([
                 {
                     id: 1,
-                    firstName: "Kirill"
+                    firstName: "Kirill",
+                    password: "123"
                     // secondName: "Lazarev",
                     // email: "lazeratrax@gmail.com",
                     // password: "1234567Q",
@@ -30,7 +31,8 @@ async function startDatabase() {
                 },
                 {
                     id: 12,
-                    firstName: "Lena"
+                    firstName: "Lena",
+                    password: "123"
                     // secondName: "Lazareva",
                     // email: "kate@gmail.com",
                     // password: "1234567Q",

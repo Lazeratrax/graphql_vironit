@@ -17,7 +17,6 @@ function getKey(header, callback) {
     });
 }
 
-
 async function isTokenValid(token) {
     if (token) {
         //разбивка на массив
