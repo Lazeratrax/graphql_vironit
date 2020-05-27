@@ -17,6 +17,8 @@ const schema = buildSchema(`
       createUser(id: Int!, firstName: String!): User!
       editUser(id: Int, firstName: String ): User!
       deleteUser(id: Int!): User!
+      loginUser(id: Int!):User!
+      logoutUser(id: Int!):User!
     }
     `)
 

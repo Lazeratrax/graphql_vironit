@@ -2,12 +2,14 @@ const express = require("express")
 const graphqlHttp = require("express-graphql")
 const schema = require("./schema")
 const startDatabase = require("./database")
-const isTokenValid = require("./validate")
+
 // const bcrypyt = require("./bcryptjs")
 // const crypto = require('crypto')
 // const {validationResult} = require('express-validator')
-
+const jwt = require('jsonwebtoken')
 const expressPlayground = require("graphql-playground-middleware-express").default;
+
+const isTokenValid = require("./validate")
 
 // Create a context for holding contextual data
 const context = async req => {
@@ -65,12 +67,6 @@ const resolvers = {
     },
     deleteUser: async ({id}, context) => {
         try {
-            // const {db} = await context();
-            // const userDelete = await db.findOne({
-            //     where: {id}
-            // })
-            // await userDelete[0].destroy()
-            // return true
             const {db} = await context();
             // const {error} = await isTokenValid(token)
             // if (error) {
@@ -81,7 +77,61 @@ const resolvers = {
             throw new Error("id is required")
         }
     },
+    loginUser: async ({id}, context, req, res) => {
+        try {
+            const {db} = await context();
+            //проверка, есть ли такой пользователь
+            const user = await db.collection('users').findOne({id})
+            if(!user) {
+                return res.status(400).json({
+                    message: "такого пользователя не существует"
+                })
+            }
+
+            // const isMatch = await bcrypt.compare(password, user.password)
+            //
+            // if (!isMatch) {
+            //     //не рекомендуется так делать!! message понятный хакеру
+            //     return res.status(400).json({message: "Неверный пароль, попробуйте еще раз"})
+            // }
+
+            const token = jwt.sign(
+                {userId: user.id},
+                config.get('jwtSecret'),
+                {expiresIn: '1h'}
+            )
+
+            //если все хорошо, отдаем
+            res.json({token, userId: user.id})
+        } catch (e) {
+            console.log(e)
+        }
+    },
+    logoutUser: async ({id}, context,req, res) => {
+        try {
+            const {db} = await context();
+            //проверка, есть ли такой пользователь
+            const user = await db.collection('users').findOne({id})
+            if(!user) {
+                return res.status(400).json({
+                    message: "такого пользователя не существует"
+                })
+            }
+
+            const token = jwt.sign(
+                {userId: user.id},
+                config.get('jwtSecret'),
+                {expiresIn: '1h'}
+            )
+
+            //если все хорошо, отдаем
+            res.json({token, userId: user.id})
+        } catch (e) {
+            console.log(e)
+        }
+    }
 }
+
 
 const app = express()
 app.use(
@@ -95,6 +145,7 @@ app.use(
 
 //запуск графического редактора в браузере
 app.get('/playground', expressPlayground({endpoint: '/graphql'}));
-app.listen(4000, () => console.log("Server ready at http://localhost:4000/graphql"))
+app.listen(4000, () => console.log(`Server ready at http://localhost:4000/graphql
+test - http://localhost:4000/playground`))
 
 

@@ -9,8 +9,9 @@ async function startDatabase() {
 //эмуляция адреса
     const mongoDBURL = await mongo.getConnectionString();
 //эмуляция коннекта
-    const connection = await MongoClient.connect(mongoDBURL, {
-        useNewUrlParser: true
+    const connection = await MongoClient.connect(mongoDBURL,{
+        useNewUrlParser: true,
+        useUnifiedTopology: true
     });
 
     if (!database) {
