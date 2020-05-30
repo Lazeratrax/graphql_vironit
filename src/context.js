@@ -3,7 +3,7 @@ const startDatabase = require("./database")
 
 const context = async req => {
     const db = await startDatabase();
-    const {authorization: token} = req.headers
+    const {authorization: token} = req.headers;
     return {db, token}
 }
 
