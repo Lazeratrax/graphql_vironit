@@ -1,88 +1,78 @@
 const {buildSchema} = require("graphql")
 
 const schema = buildSchema(`
-       type User {
-       id: Int
-       name: String
-       email: String
-       avatar: String
-       timeZone: Int
-       isPasswordSet: Boolean
-       isTeacherPreview: Boolean
-       password: String
-       access_token: String
-      }
-      
-      input UserInput {
-       id: Int
+
+     type AccessToken {
+        access_token: String!
+     }
+           
+     type User {
+       id: Int!
        name: String!
-       password: String!
-       email: String
+       email: String!
        avatar: String
        timeZone: Int
-       isPasswordSet: Boolean
-       isTeacherPreview: Boolean
-       access_token: String
-      }
+       password: String!
+     }    
+     input signUpInput {
+       id: Int!
+       name: String!
+       email: String!
+       avatar: String
+       timeZone: Int
+       password: String!
+     }
+     input logInInput {
+       id: Int!
+       email: String!
+       password: String!
+     }
+     input editUserInput {
+       id: Int!
+       email: String!
+       password: String!
+     }
+     
       
-      type Post {
-       postId: Int
-       title: String
-       content: String
-       illustration: String 
-      }
-      
-      input PostInput{
+     type Post {
        postId: Int!
        title: String!
-       content: String!
-       illustration: String
-      }
-      
+       description: String!
+       authorId: User
+     }      
+     input addPostInput{
+       postId: Int!
+       title: String!
+       description: String!
+       authorId: logInInput
+     }   
+     input editPostInput{
+       postId: Int!
+       title: String!
+       description: String!
+       authorId: logInInput
+     }     
+     
+     
+    type Mutation {
+         signUp(User__signUp: signUpInput!): User!
+         logIn(User__logIn: logInInput!): AccessToken!
+         editUser(User__editUser: editUserInput! ): User!
+         deleteUser(id: ID! ):  Boolean!     
+         
+         addPost(Post__addPost: addPostInput!): Post
+         editPost(Post__editPost: editPostInput!): Post
+         deletePost(postId: ID!): Boolean!
+    }
+    
     type Query {
         users: [User!]!
-        user(id: Int!,  name: String!, password: String!): User!
+        user(email: String!): User!
         me: User!
         posts: [Post!]!
-        post(id: Int!, title:String!):Post!
-    }
-    
-    input LoginInput {
-        name: String!
-        password: String!
-    }
-    
-    type AccessToken {
-        access_token: String!
-    }
-    
-    type Mutation {
-         createUser(user: UserInput!): User!
-         loginUser(input: LoginInput!): AccessToken!
-         editUser(id: Int, name: String, password: String!, access_token: String): User!
-         deleteUser(id: Int!, name: String, password: String! ): User!     
-         
-         createPost(post: PostInput!):Post
-         editPost(post: PostInput!):Post!
-         deletePost(post: PostInput!):Post!
+        post(postId: ID, title:String!):Post!
     }
 `)
 
 module.exports = schema;
-
-// createTestUser(user: TestUserInput!): User!
-// input TestUserInput {
-//     id: Int!
-//         name: String!
-//         password: String!
-// }
-
-// createUser(id: Int!, name: String!, password: String!): User
-// loginUser(id: Int, name: String, password: String, access_token: String): User
-// editUser(id: Int, name: String, password: String!): User!
-//     deleteUser(id: Int!, name: String, password: String! ): User!
-
-// addPost(title: String!, content: String!, author: AuthorInput):Post!
-//     editPost(title: String!, content: String!, author: User!):Post!
-//     deletePost(title: String!, content: String!, author: User!):Post!
 
