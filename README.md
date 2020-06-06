@@ -33,6 +33,7 @@ query {
  }
  
  ===============Mutation=============
+ 
 mutation($name:String!,$email:String!,$password:String! ) {
   signUp(name:$name,email:$email,password:$password ) {
     name
@@ -40,6 +41,7 @@ mutation($name:String!,$email:String!,$password:String! ) {
     password
   }
 }
+
 {
   "name":"test",
   "email": "test@",
