@@ -4,12 +4,12 @@ const bcrypt = require("bcryptjs")
 const jwt = require('jsonwebtoken')
 const isTokenValid = require("../validate")
 //timestump - для постов (postID)
-const {v1: uuidv4} = require('uuid');
+const { v1: uuidv4 } = require('uuid');
 const multer = require('multer')
 
 const graphql = require('graphql')
 //скалярные типы/ GraphQLNonNull - защита от перезаписи, или обязательные поля
-const {GraphQLID, GraphQLInt, GraphQLString, GraphQLObjectType, GraphQLSchema, GraphQLList, GraphQLNonNull} = graphql
+const { GraphQLID, GraphQLInt, GraphQLString, GraphQLObjectType, GraphQLSchema, GraphQLList, GraphQLNonNull } = graphql
 
 const Users = require('../models/User')
 const Posts = require('../models/Post')
@@ -17,15 +17,16 @@ const Posts = require('../models/Post')
 const userType = new GraphQLObjectType({
     name: "user",
     fields: () => ({
-        id: {type: GraphQLID},
-        name: {type: new GraphQLNonNull(GraphQLString)},
-        email: {type: new GraphQLNonNull(GraphQLString)},
-        avatar: {type: GraphQLString},
-        password: {type: new GraphQLNonNull(GraphQLString)},
+        id: { type: GraphQLID },
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        email: { type: new GraphQLNonNull(GraphQLString) },
+        avatar: { type: GraphQLString },
+        password: { type: new GraphQLNonNull(GraphQLString) },
+        access_token: { type: GraphQLString },
         posts: {
             type: new GraphQLList(postType),
             resolve(parent, args) {
-                return Posts.find({userId: parent.id})
+                return Posts.find({ userId: parent.id })
             }
         }
     })
@@ -34,9 +35,9 @@ const userType = new GraphQLObjectType({
 const postType = new GraphQLObjectType({
     name: 'post',
     fields: () => ({
-        postId: {type: GraphQLString},
-        title: {type: new GraphQLNonNull(GraphQLString)},
-        description: {type: new GraphQLNonNull(GraphQLString)}
+        postId: { type: GraphQLString },
+        title: { type: new GraphQLNonNull(GraphQLString) },
+        description: { type: new GraphQLNonNull(GraphQLString) }
         // authorId: {
         //     type: new GraphQLList(userType),
         //     resolve(parent, args) {
@@ -51,11 +52,11 @@ const Query = new GraphQLObjectType({
     fields: () => ({
         user: {
             type: userType,
-            args: {email: {type: new GraphQLNonNull(GraphQLString)}},
+            args: { email: { type: GraphQLNonNull(GraphQLString) } },
             async resolve(parent, args, context) {
                 const email = args.email
-                const {db} = await context();
-                const user = await db.collection("users").findOne({email});
+                const { db } = await context();
+                const user = await db.collection("users").findOne({ email });
                 return user
                 // const {error} = await isTokenValid(token);
                 // const user = Users.findById(args.id)
@@ -65,7 +66,7 @@ const Query = new GraphQLObjectType({
         users: {
             type: new GraphQLList(userType),
             async resolve(parent, args, context) {
-                const {db} = await context();
+                const { db } = await context();
                 const users = db.collection('users').find();
                 return users.toArray()
             }
@@ -73,7 +74,7 @@ const Query = new GraphQLObjectType({
         me: {
             type: userType,
             async resolve(parent, args, context) {
-                const {db, token} = await context()
+                const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
                 }
@@ -84,19 +85,19 @@ const Query = new GraphQLObjectType({
                         throw new Error('ошибка декодера токена')
                     }
                     if (decoded) {
-                        const user = await db.collection('users').findOne({id: decoded.userId});
-                        return user ? {id: user.id, email: user.email, name: user.name} : {id: 0, email: '', name: ''};
+                        const user = await db.collection('users').findOne({ id: decoded.userId });
+                        return user ? { id: user.id, email: user.email, name: user.name } : { id: 0, email: '', name: '' };
                     }
                 }
             }
         },
         post: {
             type: postType,
-            args: {title: {type: new GraphQLNonNull(GraphQLString)}},
+            args: { title: { type: new GraphQLNonNull(GraphQLString) } },
             async resolve(parent, args, context) {
                 const title = args.title
-                const {db} = await context()
-                const post = db.collection('posts').findOne({title})
+                const { db } = await context()
+                const post = db.collection('posts').findOne({ title })
                 return post
                 // return Posts.findById(args.id)
             }
@@ -105,7 +106,7 @@ const Query = new GraphQLObjectType({
         posts: {
             type: new GraphQLList(postType),
             async resolve(parent, args, context) {
-                const {db} = await context()
+                const { db } = await context()
                 const posts = db.collection('posts').find()
                 return posts.toArray()
                 // return Posts.find({})
@@ -134,19 +135,19 @@ const Mutation = new GraphQLObjectType({
         signUp: {
             type: userType,
             args: {
-                id: {type: GraphQLID},
-                name: {type: new GraphQLNonNull(GraphQLString)},
-                email: {type: new GraphQLNonNull(GraphQLString)},
-                avatar: {type: GraphQLString},
-                password: {type: new GraphQLNonNull(GraphQLString)},
+                id: { type: GraphQLID },
+                name: { type: new GraphQLNonNull(GraphQLString) },
+                email: { type: new GraphQLNonNull(GraphQLString) },
+                avatar: { type: GraphQLString },
+                password: { type: new GraphQLNonNull(GraphQLString) },
             },
             async resolve(parent, args, context) {
-                const {db} = await context();
+                const { db } = await context();
                 const name = args.name
                 const email = args.email
                 const password = args.password
                 const hashPassword = await bcrypt.hash(password, 12);
-                const newUser = {name, email, password: hashPassword};
+                const newUser = { name, email, password: hashPassword };
                 console.log('New user: ', newUser)
                 db.collection("users").insertOne(newUser);
                 return newUser
@@ -163,14 +164,14 @@ const Mutation = new GraphQLObjectType({
         logIn: {
             type: userType,
             args: {
-                email: {type: new GraphQLNonNull(GraphQLString)},
-                password: {type: new GraphQLNonNull(GraphQLString)},
+                email: { type: GraphQLNonNull(GraphQLString) },
+                password: { type: GraphQLNonNull(GraphQLString) },
             },
             async resolve(parent, args, context) {
                 const email = args.email
                 const password = args.password
-                const {db} = await context()
-                const user = await db.collection('users').findOne({email})
+                const { db } = await context()
+                const user = await db.collection('users').findOne({ email })
                 if (!user) {
                     console.log(`такого пользователя не существует`)
                     throw new Error("такого пользователя не существует")
@@ -184,12 +185,13 @@ const Mutation = new GraphQLObjectType({
                     if (isMatch) {
                         console.log("user", user)
                         const token = jwt.sign(
-                            {userId: user.id},
+                            { userEmail: user.email },
                             // `${process.env.API_IDENTIFIER}`,
                             `lazeratrax`,
-                            {expiresIn: '2h'}
+                            { expiresIn: '2h' }
                         )
-                        return {access_token: token}
+                    
+                        return { access_token: token }
                     }
                 }
             }
@@ -198,11 +200,11 @@ const Mutation = new GraphQLObjectType({
         editUser: {
             type: userType,
             args: {
-                email: {type: new GraphQLNonNull(GraphQLString)},
-                password: {type: GraphQLString},
+                email: { type: GraphQLNonNull(GraphQLString) },
+                password: { type: GraphQLString },
             },
             async resolve(parent, args, context) {
-                const {db, token} = await context()
+                const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
                     // return res.status(401).json({message: "token отсутствует"})
@@ -217,7 +219,7 @@ const Mutation = new GraphQLObjectType({
                     if (decoded) {
                         const email = args.email
                         const password = args.password
-                        let user = await db.collection('users').findOne({email})
+                        let user = await db.collection('users').findOne({ email })
                         if (!user) {
                             console.log(`такого пользователя не существует`)
                             throw new Error("такого пользователя не существует")
@@ -227,9 +229,9 @@ const Mutation = new GraphQLObjectType({
                             if (areSame) {
                                 const hashPassword = await bcrypt.hash(password, 12)
                                 db.collection('users').findOneAndUpdate(
-                                    {email},
-                                    {password: hashPassword},
-                                    {returnOriginal: false}
+                                    { email },
+                                    { password: hashPassword },
+                                    { returnOriginal: false }
                                 )
                             }
                         }
@@ -241,11 +243,11 @@ const Mutation = new GraphQLObjectType({
         deleteUser: {
             type: userType,
             args: {
-                email: {type: new GraphQLNonNull(GraphQLString)},
-                password: {type: new GraphQLNonNull(GraphQLString)},
+                email: { type:  GraphQLNonNull(GraphQLString) },
+                password: { type:  GraphQLNonNull(GraphQLString) },
             },
             async resolve(parent, args, context) {
-                const {db, token} = await context()
+                const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
                     // return res.status(401).json({message: "token отсутствует"})
@@ -258,7 +260,7 @@ const Mutation = new GraphQLObjectType({
                     if (decoded) {
                         const email = args.email
                         const password = args.password
-                        const user = await db.collection('users').findOne({email})
+                        const user = await db.collection('users').findOne({ email })
                         if (!user) {
                             console.log(`такого пользователя не существует`)
                             throw new Error("такого пользователя не существует")
@@ -271,7 +273,7 @@ const Mutation = new GraphQLObjectType({
                             }
                             if (isMatch) {
                                 return db.collection('users')
-                                    .findOneAndDelete({email})
+                                    .findOneAndDelete({ email })
                                     .then(resp => resp.value)
                             }
                         }
@@ -282,12 +284,12 @@ const Mutation = new GraphQLObjectType({
         addPost: {
             type: postType,
             args: {
-                title: {type: new GraphQLNonNull(GraphQLString)},
-                description: {type: new GraphQLNonNull(GraphQLString)},
-                authorId: {type: userType}
+                title: { type: new GraphQLNonNull(GraphQLString) },
+                description: { type: new GraphQLNonNull(GraphQLString) },
+                // authorId: {type: userType}
             },
             async resolve(parent, args, context) {
-                const {db, token} = await context()
+                const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
                     // return res.status(401).json({message: "token отсутствует"})
@@ -300,10 +302,10 @@ const Mutation = new GraphQLObjectType({
                     if (decoded) {
                         const title = args.title
                         const description = args.description
-                        const authorId = args.authorId
+                        // const authorId = args.authorId
                         //временной уникальный штамп
                         const postID = uuidv4();
-                        const newPost = {postID, title, description, authorId}
+                        const newPost = { postID, title, description }
                         db.collection("users").insertOne(newPost);
                         return newPost
                     }
@@ -313,13 +315,13 @@ const Mutation = new GraphQLObjectType({
         editPost: {
             type: postType,
             args: {
-                title: {type: GraphQLString},
-                description: {type: GraphQLString},
-                postId: {type: GraphQLNonNull(GraphQLString)},
+                title: { type: GraphQLString },
+                description: { type: GraphQLString },
+                postId: { type: GraphQLNonNull(GraphQLString) },
                 // authorId: {type: userType}
             },
             async resolve(parent, args, context) {
-                const {db, token} = await context()
+                const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
                     // return res.status(401).json({message: "token отсутствует"})
@@ -337,9 +339,9 @@ const Mutation = new GraphQLObjectType({
                         const postId = args.postId
                         // const authorId = args.authorId
                         db.collection('posts').findOneAndUpdate(
-                            {postId},
-                            {description: description, title: title},
-                            {returnOriginal: false}
+                            { postId },
+                            { description: description, title: title },
+                            { returnOriginal: false }
                         )
                     }
                 }
@@ -350,11 +352,11 @@ const Mutation = new GraphQLObjectType({
             type: postType,
             args: {
                 // title: {type: GraphQLString},
-                postId: {type: GraphQLNonNull(GraphQLString)},
+                postId: { type: GraphQLNonNull(GraphQLString) },
                 // authorId: {type: userType}
             },
             async resolve(parent, args, context) {
-                const {db, token} = await context();
+                const { db, token } = await context();
                 if (!token) {
                     throw new Error("инвалидный токен")
                 }
@@ -365,13 +367,13 @@ const Mutation = new GraphQLObjectType({
                     }
                     if (decoded) {
                         const postId = args.postId
-                        const post = await db.collection('posts').findOne({postId})
+                        const post = await db.collection('posts').findOne({ postId })
                         if (!post) {
                             throw new Error("такого поста не существует")
                         }
                         if (post) {
                             return db.collection('posts')
-                                .findOneAndDelete({postId})
+                                .findOneAndDelete({ postId })
                                 .then(resp => resp.value)
                         }
                     }
