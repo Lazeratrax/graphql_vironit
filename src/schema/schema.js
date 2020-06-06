@@ -345,6 +345,7 @@ const Mutation = new GraphQLObjectType({
                 }
             }
         },
+        //deletePost
         deletePost: {
             type: postType,
             args: {
