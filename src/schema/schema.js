@@ -85,6 +85,7 @@ const Query = new GraphQLObjectType({
                     }
                     if (decoded) {
                         const user = await db.collection('users').findOne({ id: decoded.userId });
+                        console.log('dss', decoded.userId)
                         return user ? { id: user.id, email: user.email, name: user.name } : { id: 0, email: '', name: '' };
                     }
                 }
@@ -189,6 +190,10 @@ const Mutation = new GraphQLObjectType({
                             `lazeratrax`,
                             { expiresIn: '20h' }
                         )
+                        // db.collection('users').findOneAndUpdate(
+                        //     { email },
+                        //     { access_token: token },
+                        //     { returnOriginal: false })
 
                         return { access_token: token }
                     }
@@ -283,8 +288,8 @@ const Mutation = new GraphQLObjectType({
         addPost: {
             type: postType,
             args: {
-                title: { type: new GraphQLNonNull(GraphQLString) },
-                description: { type: new GraphQLNonNull(GraphQLString) },
+                title: { type:  GraphQLNonNull(GraphQLString) },
+                description: { type:  GraphQLNonNull(GraphQLString) },
                 // authorId: {type: userType}
             },
             async resolve(parent, args, context) {
