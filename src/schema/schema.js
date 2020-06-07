@@ -6,7 +6,6 @@ const isTokenValid = require("../validate")
 //timestump - для постов (postID)
 const { v1: uuidv4 } = require('uuid');
 const multer = require('multer')
-
 const graphql = require('graphql')
 //скалярные типы/ GraphQLNonNull - защита от перезаписи, или обязательные поля
 const { GraphQLID, GraphQLInt, GraphQLString, GraphQLObjectType, GraphQLSchema, GraphQLList, GraphQLNonNull } = graphql
@@ -188,9 +187,9 @@ const Mutation = new GraphQLObjectType({
                             { userEmail: user.email },
                             // `${process.env.API_IDENTIFIER}`,
                             `lazeratrax`,
-                            { expiresIn: '2h' }
+                            { expiresIn: '20h' }
                         )
-                    
+
                         return { access_token: token }
                     }
                 }
@@ -243,8 +242,8 @@ const Mutation = new GraphQLObjectType({
         deleteUser: {
             type: userType,
             args: {
-                email: { type:  GraphQLNonNull(GraphQLString) },
-                password: { type:  GraphQLNonNull(GraphQLString) },
+                email: { type: GraphQLNonNull(GraphQLString) },
+                password: { type: GraphQLNonNull(GraphQLString) },
             },
             async resolve(parent, args, context) {
                 const { db, token } = await context()
@@ -304,20 +303,23 @@ const Mutation = new GraphQLObjectType({
                         const description = args.description
                         // const authorId = args.authorId
                         //временной уникальный штамп
-                        const postID = uuidv4();
-                        const newPost = { postID, title, description }
-                        db.collection("users").insertOne(newPost);
+                        const postId = await uuidv4();
+                        // const data = await new Date().toISOString()
+                        // console.log('дата ', data)
+                        const newPost = { postId, title, description }
+                        db.collection("posts").insertOne(newPost);
                         return newPost
                     }
                 }
             }
         },
+        // 
         editPost: {
             type: postType,
             args: {
                 title: { type: GraphQLString },
                 description: { type: GraphQLString },
-                postId: { type: GraphQLNonNull(GraphQLString) },
+                postId: { type: GraphQLString },
                 // authorId: {type: userType}
             },
             async resolve(parent, args, context) {
@@ -334,15 +336,24 @@ const Mutation = new GraphQLObjectType({
                         throw new Error('ошибка декодера токена')
                     }
                     if (decoded) {
-                        const title = args.title
-                        const description = args.description
                         const postId = args.postId
-                        // const authorId = args.authorId
-                        db.collection('posts').findOneAndUpdate(
-                            { postId },
-                            { description: description, title: title },
-                            { returnOriginal: false }
-                        )
+                        let post = await db.collection('posts').findOne({ postId })
+                        if (!post) {
+                            console.log(`такого поста не существует`)
+                            throw new Error("такого поста не существует")
+                        }
+                        if (post) {
+                            const title = args.title
+                            const description = args.description
+                            // const authorId = args.authorId
+                            db.collection('posts').findOneAndUpdate(
+                                { postId },
+                                { $set: { description, title } },
+                                { returnOriginal: false }
+                            )
+                                .then(resp => resp.value);
+                        }
+                        return post
                     }
                 }
             }
