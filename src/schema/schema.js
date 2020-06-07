@@ -1,14 +1,20 @@
-require("dotenv").config()
-// require('validator')
+// require("dotenv").config()
 const bcrypt = require("bcryptjs")
 const jwt = require('jsonwebtoken')
-const isTokenValid = require("../validate")
-//timestump - для постов (postID)
+// const isTokenValid = require("../validate")
 const { v1: uuidv4 } = require('uuid');
 const multer = require('multer')
 const graphql = require('graphql')
 //скалярные типы/ GraphQLNonNull - защита от перезаписи, или обязательные поля
-const { GraphQLID, GraphQLInt, GraphQLString, GraphQLObjectType, GraphQLSchema, GraphQLList, GraphQLNonNull } = graphql
+const { GraphQLID,
+    GraphQLInt,
+    GraphQLString,
+    GraphQLObjectType,
+    GraphQLInputObjectType,
+    GraphQLSchema,
+    GraphQLList,
+    GraphQLBoolean,
+    GraphQLNonNull } = graphql
 
 const Users = require('../models/User')
 const Posts = require('../models/Post')
@@ -34,15 +40,10 @@ const userType = new GraphQLObjectType({
 const postType = new GraphQLObjectType({
     name: 'post',
     fields: () => ({
-        postId: { type: GraphQLString },
+        id: { type: GraphQLString },
         title: { type: new GraphQLNonNull(GraphQLString) },
-        description: { type: new GraphQLNonNull(GraphQLString) }
-        // authorId: {
-        //     type: new GraphQLList(userType),
-        //     resolve(parent, args) {
-        //         return Users.find({userId: parent.id})
-        //     }
-        // }
+        description: { type: new GraphQLNonNull(GraphQLString) },
+        authorId: { type: GraphQLString }
     })
 })
 
@@ -57,9 +58,6 @@ const Query = new GraphQLObjectType({
                 const { db } = await context();
                 const user = await db.collection("users").findOne({ email });
                 return user
-                // const {error} = await isTokenValid(token);
-                // const user = Users.findById(args.id)
-                // return Users.findById(args.id)
             }
         },
         users: {
@@ -75,57 +73,48 @@ const Query = new GraphQLObjectType({
             async resolve(parent, args, context) {
                 const { db, token } = await context()
                 if (!token) {
-                    throw new Error("инвалидный токен")
+                    throw new Error("invalid token")
                 }
-                if (token) {
-                    // const decoded = jwt.verify(token, `${process.env.API_IDENTIFIER}`)
-                    const decoded = jwt.verify(token, `lazeratrax`)
-                    if (!decoded) {
-                        throw new Error('ошибка декодера токена')
-                    }
-                    if (decoded) {
-                        const user = await db.collection('users').findOne({ id: decoded.userId });
-                        console.log('dss', decoded.userId)
-                        return user ? { id: user.id, email: user.email, name: user.name } : { id: 0, email: '', name: '' };
-                    }
+                // const decoded = jwt.verify(token, `${process.env.API_IDENTIFIER}`)
+                const decoded = jwt.verify(token, `lazeratrax`)
+                if (!decoded) {
+                    throw new Error('ошибка декодера токена')
                 }
+                const user = await db.collection('users').findOne({ id: decoded.userId });
+                console.log('dss', decoded.userId)
+                return user ? { id: user.id, email: user.email, name: user.name } : { id: 0, email: '', name: '' };
             }
         },
         post: {
             type: postType,
-            args: { title: { type: new GraphQLNonNull(GraphQLString) } },
+            args: { title: { type: GraphQLNonNull(GraphQLID) } },
             async resolve(parent, args, context) {
                 const title = args.title
                 const { db } = await context()
-                const post = db.collection('posts').findOne({ title })
+                const post = db.collection('posts').findOne({ title });
                 return post
-                // return Posts.findById(args.id)
             }
         },
-        //выборка поста по названию
         posts: {
             type: new GraphQLList(postType),
-            async resolve(parent, args, context) {
+            args: {
+                input: {
+                    type: new GraphQLInputObjectType({
+                        name: 'PostInput',
+                        fields: () => ({
+                            query: { type: GraphQLString },
+                        })
+                    })
+                }
+            },
+            async resolve(parent, { input: { query } }, context) {
                 const { db } = await context()
-                const posts = db.collection('posts').find()
+                const posts = query ?
+                    db.collection('posts').find({ $text: { $search: query } }) :
+                    db.collection('posts').find()
                 return posts.toArray()
-                // return Posts.find({})
             }
-        },
-        //выборка всех постов по юзеру
-        // postsOfUser: {
-        //     type: new GraphQLList(postType),
-        //     async resolve(parent, args, context) {
-        //         const {db} = await context()
-        //         const posts = db.collection('posts').find()
-        //         return posts.toArray()
-        //         // return Posts.find({})
-        //     }
-        // },
-        // me: {
-        //     type: new GraphQLList(),
-        //
-        // }
+        }
     })
 })
 
@@ -135,69 +124,56 @@ const Mutation = new GraphQLObjectType({
         signUp: {
             type: userType,
             args: {
-                id: { type: GraphQLID },
-                name: { type: new GraphQLNonNull(GraphQLString) },
-                email: { type: new GraphQLNonNull(GraphQLString) },
-                avatar: { type: GraphQLString },
-                password: { type: new GraphQLNonNull(GraphQLString) },
+                input: {
+                    type: new GraphQLInputObjectType({
+                        name: 'SignUpInput',
+                        fields: () => ({
+                            email: { type: GraphQLNonNull(GraphQLString) },
+                            password: { type: GraphQLNonNull(GraphQLString) },
+                        })
+                    })
+                },
             },
-            async resolve(parent, args, context) {
+            async resolve(parent, { input: { email, password } }, context) {
                 const { db } = await context();
-                const name = args.name
-                const email = args.email
-                const password = args.password
                 const hashPassword = await bcrypt.hash(password, 12);
                 const newUser = { name, email, password: hashPassword };
-                console.log('New user: ', newUser)
                 db.collection("users").insertOne(newUser);
                 return newUser
-                // const user = new Users({
-                //     id: args.id,
-                //     name: args.name,
-                //     email: args.email,
-                //     // avatar: args.avatar,
-                //     password: args.password
-                // })
-                // return user.save()
             }
         },
         logIn: {
             type: userType,
             args: {
-                email: { type: GraphQLNonNull(GraphQLString) },
-                password: { type: GraphQLNonNull(GraphQLString) },
+                input: {
+                    type: new GraphQLInputObjectType({
+                        name: 'LogInInput',
+                        fields: () => ({
+                            email: { type: GraphQLNonNull(GraphQLString) },
+                            password: { type: GraphQLNonNull(GraphQLString) },
+                        })
+                    })
+                },
             },
-            async resolve(parent, args, context) {
-                const email = args.email
-                const password = args.password
+            async resolve(parent, { input: { email, password } }, context) {
                 const { db } = await context()
                 const user = await db.collection('users').findOne({ email })
                 if (!user) {
                     console.log(`такого пользователя не существует`)
                     throw new Error("такого пользователя не существует")
                 }
-                if (user) {
-                    const isMatch = await bcrypt.compare(password, user.password)
-                    if (!isMatch) {
-                        console.log(`Неверный пароль, попробуйте еще раз`)
-                        throw new Error("Неверный пароль, попробуйте еще раз")
-                    }
-                    if (isMatch) {
-                        console.log("user", user)
-                        const token = jwt.sign(
-                            { userEmail: user.email },
-                            // `${process.env.API_IDENTIFIER}`,
-                            `lazeratrax`,
-                            { expiresIn: '20h' }
-                        )
-                        // db.collection('users').findOneAndUpdate(
-                        //     { email },
-                        //     { access_token: token },
-                        //     { returnOriginal: false })
-
-                        return { access_token: token }
-                    }
+                const isMatch = await bcrypt.compare(password, user.password)
+                if (!isMatch) {
+                    console.log(`Неверный пароль, попробуйте еще раз`)
+                    throw new Error("Неверный пароль, попробуйте еще раз")
                 }
+                const token = jwt.sign(
+                    { userEmail: user.email },
+                    // `${process.env.API_IDENTIFIER}`,
+                    `lazeratrax`,
+                    { expiresIn: '20h' }
+                )
+                return { access_token: token }
             }
         },
         //редактирую пароль, мыло неизменно
@@ -211,192 +187,160 @@ const Mutation = new GraphQLObjectType({
                 const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
-                    // return res.status(401).json({message: "token отсутствует"})
                 }
-                if (token) {
-                    // // const decoded = jwt.verify(token,`${process.env.API_IDENTIFIER}`)
-                    const decoded = jwt.verify(token, `lazeratrax`)
-                    // //раскодированный токен ложим в объект req
-                    if (!decoded) {
-                        throw new Error('ошибка декодера токена')
-                    }
-                    if (decoded) {
-                        const email = args.email
-                        const password = args.password
-                        let user = await db.collection('users').findOne({ email })
-                        if (!user) {
-                            console.log(`такого пользователя не существует`)
-                            throw new Error("такого пользователя не существует")
-                        }
-                        if (user) {
-                            const areSame = await bcrypt.compare(password, user.password)
-                            if (areSame) {
-                                const hashPassword = await bcrypt.hash(password, 12)
-                                db.collection('users').findOneAndUpdate(
-                                    { email },
-                                    { password: hashPassword },
-                                    { returnOriginal: false }
-                                )
-                            }
-                        }
-                        return user
-                    }
+                // // const decoded = jwt.verify(token,`${process.env.API_IDENTIFIER}`)
+                const decoded = jwt.verify(token, `lazeratrax`)
+                if (!decoded) {
+                    throw new Error('ошибка декодера токена')
                 }
+                const email = args.email
+                const password = args.password
+                let user = await db.collection('users').findOne({ email })
+                if (!user) {
+                    console.log(`такого пользователя не существует`)
+                    throw new Error("такого пользователя не существует")
+                }
+                const areSame = await bcrypt.compare(password, user.password)
+                if (!areSame) {
+                    console.log(`что-то с паролем`)
+                    throw new Error("что-то с паролем")
+                }
+                const hashPassword = await bcrypt.hash(password, 12)
+                db.collection('users').findOneAndUpdate(
+                    { email },
+                    { password: hashPassword },
+                    { returnOriginal: false }
+                )
+                return user
             }
         },
-        deleteUser: {
-            type: userType,
-            args: {
-                email: { type: GraphQLNonNull(GraphQLString) },
-                password: { type: GraphQLNonNull(GraphQLString) },
-            },
-            async resolve(parent, args, context) {
-                const { db, token } = await context()
-                if (!token) {
-                    throw new Error("инвалидный токен")
-                    // return res.status(401).json({message: "token отсутствует"})
-                }
-                if (token) {
-                    const decoded = jwt.verify(token, `lazeratrax`)
-                    if (!decoded) {
-                        throw new Error('ошибка декодера токена')
-                    }
-                    if (decoded) {
-                        const email = args.email
-                        const password = args.password
-                        const user = await db.collection('users').findOne({ email })
-                        if (!user) {
-                            console.log(`такого пользователя не существует`)
-                            throw new Error("такого пользователя не существует")
-                        }
-                        if (user) {
-                            const isMatch = await bcrypt.compare(password, user.password)
-                            if (!isMatch) {
-                                console.log(`Неверный пароль, попробуйте еще раз`)
-                                throw new Error("Неверный пароль, попробуйте еще раз")
-                            }
-                            if (isMatch) {
-                                return db.collection('users')
-                                    .findOneAndDelete({ email })
-                                    .then(resp => resp.value)
-                            }
-                        }
-                    }
-                }
-            }
-        },
+        // deleteUser: {
+        //     type: userType,
+        //     args: {
+        //         email: { type: GraphQLNonNull(GraphQLString) },
+        //         password: { type: GraphQLNonNull(GraphQLString) },
+        //     },
+        //     async resolve(parent, args, context) {
+        //         const { db, token } = await context()
+        //         if (!token) {
+        //             throw new Error("инвалидный токен")
+        //             // return res.status(401).json({message: "token отсутствует"})
+        //         }
+        //         const decoded = jwt.verify(token, `lazeratrax`)
+        //         if (!decoded) {
+        //             throw new Error('ошибка декодера токена')
+        //         }
+        //         const email = args.email
+        //         const password = args.password
+        //         const user = await db.collection('users').findOne({ email })
+        //         if (!user) {
+        //             console.log(`такого пользователя не существует`)
+        //             throw new Error("такого пользователя не существует")
+        //         }
+        //         const isMatch = await bcrypt.compare(password, user.password)
+        //         if (!isMatch) {
+        //             console.log(`Неверный пароль, попробуйте еще раз`)
+        //             throw new Error("Неверный пароль, попробуйте еще раз")
+        //         }
+        //         if (isMatch) {
+        //             return db.collection('users')
+        //                 .findOneAndDelete({ email })
+        //                 .then(resp => resp.value)
+        //         }
+        //     }
+        // },
         addPost: {
             type: postType,
             args: {
-                title: { type:  GraphQLNonNull(GraphQLString) },
-                description: { type:  GraphQLNonNull(GraphQLString) },
-                // authorId: {type: userType}
+                input: {
+                    type: new GraphQLInputObjectType({
+                        name: 'AddPostInput',
+                        fields: () => ({
+                            title: { type: new GraphQLNonNull(GraphQLString) },
+                            description: { type: new GraphQLNonNull(GraphQLString) },
+                            authorId: { type: new GraphQLNonNull(GraphQLString) }
+                        })
+                    })
+                }
             },
-            async resolve(parent, args, context) {
+            async resolve(parent, { input }, context) {
                 const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
                     // return res.status(401).json({message: "token отсутствует"})
                 }
-                if (token) {
-                    const decoded = jwt.verify(token, `lazeratrax`)
-                    if (!decoded) {
-                        throw new Error('ошибка декодера токена')
-                    }
-                    if (decoded) {
-                        const title = args.title
-                        const description = args.description
-                        // const authorId = args.authorId
-                        //временной уникальный штамп
-                        const postId = await uuidv4();
-                        // const data = await new Date().toISOString()
-                        // console.log('дата ', data)
-                        const newPost = { postId, title, description }
-                        db.collection("posts").insertOne(newPost);
-                        return newPost
-                    }
+                const decoded = jwt.verify(token, `lazeratrax`)
+                if (!decoded) {
+                    throw new Error('ошибка декодера токена')
                 }
+                const newPost = { id: uuidv4(), ...input }
+                db.collection("posts").insertOne(newPost);
+                return newPost
             }
         },
-        // 
         editPost: {
             type: postType,
             args: {
-                title: { type: GraphQLString },
-                description: { type: GraphQLString },
-                postId: { type: GraphQLString },
-                // authorId: {type: userType}
+                input: {
+                    type: new GraphQLInputObjectType({
+                        name: "editPostInput",
+                        fields: () => ({
+                            id: { type: GraphQLID },
+                            title: { type: GraphQLString },
+                            description: { type: GraphQLString },
+                        })
+                    })
+                }
             },
-            async resolve(parent, args, context) {
+            async resolve(parent, { input: { id, title, description } }, context) {
                 const { db, token } = await context()
                 if (!token) {
                     throw new Error("инвалидный токен")
-                    // return res.status(401).json({message: "token отсутствует"})
                 }
-                if (token) {
-                    // // const decoded = jwt.verify(token,`${process.env.API_IDENTIFIER}`)
-                    const decoded = jwt.verify(token, `lazeratrax`)
-                    // //раскодированный токен ложим в объект req
-                    if (!decoded) {
-                        throw new Error('ошибка декодера токена')
-                    }
-                    if (decoded) {
-                        const postId = args.postId
-                        let post = await db.collection('posts').findOne({ postId })
-                        if (!post) {
-                            console.log(`такого поста не существует`)
-                            throw new Error("такого поста не существует")
-                        }
-                        if (post) {
-                            const title = args.title
-                            const description = args.description
-                            // const authorId = args.authorId
-                            db.collection('posts').findOneAndUpdate(
-                                { postId },
-                                { $set: { description, title } },
-                                { returnOriginal: false }
-                            )
-                                .then(resp => resp.value);
-                        }
-                        return post
-                    }
+                // // const decoded = jwt.verify(token,`${process.env.API_IDENTIFIER}`)
+                const decoded = jwt.verify(token, `lazeratrax`)
+                if (!decoded) {
+                    throw new Error('ошибка декодера токена')
                 }
+                const post = await db.collection('posts').findOne({ id })
+                if (!post) {
+                    console.log(`такого поста не существует`)
+                    throw new Error("такого поста не существует")
+                }
+                const { value } = db.collection('posts').updateOne(
+                    { id },
+                    { $set: { description, title } },
+                    // { returnOriginal: true }
+                    { upsert: true }
+                )
+                // .then(resp => resp.value);
+                return value
             }
         },
-        //deletePost
         deletePost: {
-            type: postType,
+            type: GraphQLBoolean,
             args: {
-                // title: {type: GraphQLString},
-                postId: { type: GraphQLNonNull(GraphQLString) },
-                // authorId: {type: userType}
+                id: { type: GraphQLNonNull(GraphQLString) },
             },
-            async resolve(parent, args, context) {
+            async resolve(parent, { id }, context) {
                 const { db, token } = await context();
                 if (!token) {
                     throw new Error("инвалидный токен")
                 }
-                if (token) {
-                    const decoded = jwt.verify(token, `lazeratrax`)
-                    if (!decoded) {
-                        throw new Error('ошибка декодера токена')
-                    }
-                    if (decoded) {
-                        const postId = args.postId
-                        const post = await db.collection('posts').findOne({ postId })
-                        if (!post) {
-                            throw new Error("такого поста не существует")
-                        }
-                        if (post) {
-                            return db.collection('posts')
-                                .findOneAndDelete({ postId })
-                                .then(resp => resp.value)
-                        }
-                    }
+                const decoded = jwt.verify(token, `lazeratrax`)
+                if (!decoded) {
+                    throw new Error('ошибка декодера токена')
                 }
+                const post = await db.collection('posts').findOne({ postId })
+                if (!post) {
+                    throw new Error("такого поста не существует")
+                }
+                await db.collection('posts').deleteOne({ id })
+                // .findOneAndDelete({ postId })
+                // .then(resp => resp.value)
+                return true 
             }
         }
-
     })
 })
 
