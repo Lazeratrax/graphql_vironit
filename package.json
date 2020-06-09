@@ -1,0 +1,43 @@
+{
+  "name": "graphql_vironit",
+  "version": "1.0.0",
+  "description": "init\r playground tests:",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/joi": "^17.1.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-graphql": "^0.9.0",
+    "express-validator": "^6.5.0",
+    "graphql": "^15.0.0",
+    "graphql-playground-middleware-express": "^1.7.15",
+    "graphql-validation": "^2.2.2",
+    "graphql-yoga": "^1.18.3",
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^1.8.0",
+    "mongodb": "^3.5.7",
+    "mongodb-memory-server": "^6.6.1",
+    "mongoose": "^5.9.17",
+    "multer": "^1.4.2",
+    "nodemon": "^2.0.4",
+    "prisma-client-lib": "^1.34.10",
+    "uniqid": "^5.2.0",
+    "uuid": "^8.1.0",
+    "validator": "^13.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.7",
+    "@babel/node": "^7.8.7",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/preset-env": "^7.8.7"
+  }
+}
