@@ -67,8 +67,7 @@ const Query = new GraphQLObjectType({
                 if (!decoded) {
                     throw new Error('ошибка декодера токена')
                 }
-                const user = await db.collection('users')
-                .findOne({ id: decoded.userId });
+                const user = await db.collection('users').findOne({ id: decoded.userId });
                 return user ? 
                     { id: user.id, email: user.email, name: user.name } :
                     { id: 0, email: '', name: '', password:'' };
@@ -139,7 +138,7 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, { input: {name, email, password } }, context) {
                 const { db } = await context();
                 const hashPassword = await bcrypt.hash(password, 12);
-                const newUser = { name: name || email, email, password: hashPassword };
+                const newUser = { id: uuidv4(), name: name || email, email, password: hashPassword };
                 db.collection("users").insertOne(newUser);
                 return newUser
             }
