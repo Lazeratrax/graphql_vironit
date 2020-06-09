@@ -1,7 +1,6 @@
 {
   "name": "graphql_vironit",
   "version": "1.0.0",
-  "description": "init\r playground tests:",
   "main": "index.js",
   "scripts": {
     "start": "nodemon src/index.js"
